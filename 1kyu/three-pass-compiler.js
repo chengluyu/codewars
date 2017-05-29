@@ -51,9 +51,8 @@ Compiler.prototype.pass1 = function (program) {
 
   function parseFunction() {
     expect('[');
-    parseArgList().forEach((arg, index) => {
-      env.set(arg, index);
-    });
+
+    parseArgList().map((arg, index) => env.set(arg, index))
 
     expect(']');
     let expression = parseExpression();
@@ -116,7 +115,7 @@ Compiler.prototype.pass1 = function (program) {
         throw new Error(`undefined identifier: ${inspect(peek.value)}`);
       }
     }
-    
+
     throw new Error(`unknown token: ${inspect(peek.value)}`);
   }
 
@@ -126,32 +125,27 @@ Compiler.prototype.pass1 = function (program) {
 
 Compiler.prototype.pass2 = function (ast) {
   // return AST with constant expressions reduced
-  function reduce(node) {
-    // type check
-    if (typeof node !== 'object') {
-      throw new Error('unqualified object');
+
+  function reduce(t) {
+    if (t.op === 'arg' || t.op === 'imm') {
+      return t;
     }
 
-    if (node.op === 'arg' || node.op === 'imm') {
-      return node;
-    }
+    const lhs = reduce(t.a), rhs = reduce(t.b);
 
-    node.a = reduce(node.a);
-    node.b = reduce(node.b);
-
-    if (node.a.op === 'imm' && node.b.op === 'imm') {
-      let reduced;
-      switch (node.op) {
-        case '+': reduced = node.a.n + node.b.n; break;
-        case '-': reduced = node.a.n - node.b.n; break;
-        case '*': reduced = node.a.n * node.b.n; break;
-        case '/': reduced = node.a.n / node.b.n; break;
-        default: throw new Error(`unknown op: ${inspect(node.op)}`)
+    if (lhs.op === 'imm' && rhs.op === 'imm') {
+      let n;
+      switch (t.op) {
+        case '+': n = lhs.n + rhs.n; break;
+        case '-': n = lhs.n - rhs.n; break;
+        case '*': n = lhs.n * rhs.n; break;
+        case '/': n = lhs.n / rhs.n; break;
+        default: throw new Error(`unknown op: ${inspect(t.op)}`)
       }
-      return { op: 'imm', n: reduced };
+      return { op: 'imm', n };
     }
 
-    return node;
+    return { op: t.op, a: lhs, b: rhs }
   }
 
   return reduce(ast);
@@ -159,24 +153,38 @@ Compiler.prototype.pass2 = function (ast) {
 
 Compiler.prototype.pass3 = function (ast) {
   // return assembly instructions
+  const arith2op = { '+': 'AD', '-': 'SU', '*': 'MU', '/': 'DI' }
   let asm = [];
 
-  function dump(node, hint) {
-    switch (node.op) {
+  // the result is saved at r0
+  // the value of r1 is remained
+  function emit(t) {
+    switch (t.op) {
       case '+':
       case '-':
       case '*':
       case '/':
-        asm.push('PU');
-        dump(node.a);
-        asm.push('SW');
-        dump(node.b);
+        // save the value of r1
+        asm.push('SW')
+        asm.push('PU')
+        emit(t.b)
+        asm.push('SW')
+        emit(t.a)
+        asm.push(arith2op[t.op])
+        // restore the value of r1
+        asm.push('SW')
+        asm.push('PO')
+        asm.push('SW')
+        break
       case 'imm':
-        
+        asm.push(`IM ${t.n}`)
+        break
       case 'arg':
-
+        asm.push(`AR ${t.n}`)
+        break
     }
   }
-};
 
-exports.Compiler = Compiler;
+  emit(ast);
+  return asm;
+};
