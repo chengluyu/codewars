@@ -1,7 +1,9 @@
+// https://www.codewars.com/kata/symbolic-differentiation-of-prefix-expressions/train/rust
+// I struggled on this kata for such a long time because of a small pitfall.
+
 use std::ops;
 use std::fmt::Display;
 use std::str::FromStr;
-use std::borrow::Borrow;
 
 #[derive(Copy, Clone)]
 enum UnaryOp {
@@ -118,6 +120,25 @@ impl ops::BitXor<Expr> for Expr {
 }
 
 impl Expr {
+    fn zero() -> Expr { Expr::Number(0f64) }
+
+    fn one() -> Expr { Expr::Number(1f64) }
+
+    fn var(c: char) -> Expr { Expr::Variable(c) }
+
+    fn is_constant(&self) -> bool {
+        match self {
+            Expr::Number(_) => true,
+            Expr::Variable(_) => false,
+            Expr::Unary(_, arg) => arg.is_constant(),
+            Expr::Binary(_, lhs, rhs) => lhs.is_constant() && rhs.is_constant(),
+        }
+    }
+
+    fn get_copy(&self) -> Expr {
+        self.clone()
+    }
+
     fn unary_with(&self, op: UnaryOp) -> Expr {
         Expr::Unary(op, Box::new(self.clone()))
     }
@@ -130,72 +151,72 @@ impl Expr {
         self.unary_with(UnaryOp::Cosine)
     }
 
-    fn tan(&self) -> Expr {
-        self.unary_with(UnaryOp::Tangent)
+    fn log(&self) -> Expr {
+        self.unary_with(UnaryOp::Logarithm)
     }
 
     fn exp(&self) -> Expr {
         self.unary_with(UnaryOp::Exponent)
     }
 
-    fn log(&self) -> Expr {
-        self.unary_with(UnaryOp::Logarithm)
-    }
-
     fn inverse(&self) -> Expr {
-        Expr::Number(1f64) / self.clone()
+        Expr::one() / self.clone()
     }
 
     fn square(&self) -> Expr {
-        self.clone() * self.clone()
+        Expr::Binary(BinaryOp::Pow, Box::new(self.clone()), Box::new(Expr::Number(2f64)))
     }
 
     fn neg(&self) -> Expr { Expr::Number(-1f64) * self.clone() }
 
     fn differentiate(&self) -> Expr {
         match self {
-            Expr::Number(value) => Expr::Number(0f64),
-            Expr::Variable(name) => Expr::Number(1f64),
+            Expr::Number(_) => Expr::zero(),
+            Expr::Variable(_) => Expr::one(),
             Expr::Unary(op, arg) => match op {
                 UnaryOp::Sine => arg.differentiate() * arg.cos(),
                 UnaryOp::Cosine => arg.differentiate() * arg.sin().neg(),
-                UnaryOp::Tangent => arg.differentiate() * arg.cos().square().inverse(),
-                UnaryOp::Exponent => arg.clone(),
+                UnaryOp::Tangent => arg.differentiate() * (Expr::one() + self.square()),
+                UnaryOp::Exponent => arg.differentiate() * self.get_copy(),
                 UnaryOp::Logarithm => arg.differentiate() * arg.inverse(),
             },
             Expr::Binary(op, lhs, rhs) => match op {
                 BinaryOp::Add => lhs.differentiate() + rhs.differentiate(),
                 BinaryOp::Sub => lhs.differentiate() - rhs.differentiate(),
-                BinaryOp::Mul => lhs.differentiate() * rhs.borrow().clone() + lhs.borrow().clone() * rhs.differentiate(),
-                BinaryOp::Div => (lhs.differentiate() * rhs.borrow().clone() - lhs.borrow().clone() * rhs.differentiate()) / rhs.square(),
-                BinaryOp::Pow => (lhs ^ rhs) * (lhs.differentiate() * (rhs / lhs) + rhs.differentiate() * lhs.log()),
+                BinaryOp::Mul => lhs.differentiate() * rhs.get_copy() + lhs.get_copy() * rhs.differentiate(),
+                BinaryOp::Div => if rhs.is_constant() { // Denominator is constant
+                    lhs.differentiate() / rhs.get_copy()
+                } else { // General rule for division
+                    (lhs.differentiate() * rhs.get_copy() - lhs.get_copy() * rhs.differentiate()) / rhs.square()
+                },
+                BinaryOp::Pow => match (lhs.is_constant(), rhs.is_constant()) { // the precedence here is the key to pass, notice parts embraced in brackets
+                    (true, true) => Expr::zero(), // {a ^ b}' = 0
+                    (true, false) => rhs.differentiate() * ((lhs.get_copy() ^ rhs.get_copy()) * lhs.log()), // {a ^ f(x)}' = f'(x) * [a ^ f(x) * ln a]
+                    (false, true) => lhs.differentiate() * (rhs.get_copy() * (lhs.get_copy() ^ (rhs.get_copy() - Expr::one()))), // {f(x) ^ a}' = f'(x) * [a * f(x) ^ (a - 1)]
+                    (false, false) => (rhs.get_copy() * lhs.log()).exp().differentiate(), // {f(x) ^ g(x)}' = {e ^ (g(x) * ln(f(x)))}'
+                },
             },
         }
     }
 
     fn simplify(&self) -> Expr {
         match self {
-            &Expr::Number(value) => Expr::Number(value),
-            &Expr::Variable(name) => Expr::Variable(name),
-            Expr::Unary(op, arg) => {
-                let simplified_arg = arg.simplify();
-                if let Expr::Number(x) = simplified_arg {
-                    Expr::Number(op.eval(x))
-                } else {
-                    Expr::Unary(*op, Box::new(simplified_arg))
-                }
+            Expr::Unary(op, arg) => Expr::Unary(*op, Box::new(arg.simplify())),
+            Expr::Binary(op, lhs, rhs) => match (op, lhs.simplify(), rhs.simplify()) {
+                (op, Expr::Number(x), Expr::Number(y)) => Expr::Number(op.eval(x, y)),
+                (BinaryOp::Add, Expr::Number(c), fx) => if c == 0f64 { fx } else { Expr::Number(c) + fx },
+                (BinaryOp::Add, fx, Expr::Number(c)) => if c == 0f64 { fx } else { fx + Expr::Number(c) },
+                (BinaryOp::Sub, Expr::Variable(a), Expr::Variable(b)) => if a == b { Expr::zero() } else { Expr::var(a) - Expr::var(b) }
+                (BinaryOp::Sub, fx, Expr::Number(c)) => if c == 0f64 { fx } else { fx - Expr::Number(c) },
+                (BinaryOp::Mul, fx, Expr::Number(c)) => if c == 0f64 { Expr::zero() } else if c == 1f64 { fx } else { fx * Expr::Number(c) },
+                (BinaryOp::Mul, Expr::Number(c), fx) => if c == 0f64 { Expr::zero() } else if c == 1f64 { fx } else { Expr::Number(c) * fx }
+                (BinaryOp::Div, Expr::Number(num), den) => if num == 0f64 { Expr::zero() } else { Expr::Number(num) / den },
+                (BinaryOp::Div, num, Expr::Number(den)) => if den == 0f64 { panic!("divide by zero") } else if den == 1f64 { num } else { num / Expr::Number(den) },
+                (BinaryOp::Pow, base, Expr::Number(exp)) => if exp == 0f64 { Expr::one() } else if exp == 1f64 { base } else { base ^ Expr::Number(exp) },
+                (BinaryOp::Pow, Expr::Number(base), exp) => if base == 0f64 { Expr::zero() } else if base == 1f64 { Expr::one() } else { Expr::Number(base) ^ exp },
+                (op, lhs, rhs) => Expr::Binary(*op, Box::new(lhs), Box::new(rhs)),
             },
-            Expr::Binary(op, lhs, rhs) => {
-                match (op, lhs.simplify(), rhs.simplify()) {
-                    (BinaryOp::Add, Expr::Number(0f64), r) => r, // 0 + x = x
-                    (BinaryOp::Add, l, Expr::Number(0f64)) | (BinaryOp::Sub, l, Expr::Number(0f64)) => l, // x + 0 = x - 0 = x
-                    (BinaryOp::Mul, Expr::Number(0f64), _) | (BinaryOp::Mul, _, Expr::Number(0f64)) => Expr::Number(0f64), // 0 * x = x * 0 = 0
-                    (BinaryOp::Mul, Expr::Number(1f64), r) => r, // 1 * x = x
-                    (BinaryOp::Mul, l, Expr::Number(1f64)) | (BinaryOp::Div, l, Expr::Number(1f64)) => l, // x * 1 = x / 1 = x
-                    (o, Expr::Number(x), Expr::Number(y)) => Expr::Number(o.eval(x, y)),
-                    (o, l, r) => Expr::Binary(*o, Box::new(l), Box::new(r)),
-                }
-            }
+            _ => self.clone(),
         }
     }
 }
@@ -222,12 +243,13 @@ impl FromStr for Expr {
 
 struct ExprParserError {
     at: usize,
+    meet: Option<char>,
     message: &'static str,
 }
 
 impl ExprParserError {
-    fn new(at: usize, message: &'static str) -> ExprParserError {
-        ExprParserError { at, message }
+    fn new(at: usize, meet: Option<char>, message: &'static str) -> ExprParserError {
+        ExprParserError { at, meet, message }
     }
 }
 
@@ -242,7 +264,8 @@ impl ExprParser {
     }
 
     fn error(&self, message: &'static str) -> ExprParserError {
-        ExprParserError::new(self.at, message)
+        let meet = if self.at < self.chars.len() { Some(self.chars[self.at]) } else { None };
+        ExprParserError::new(self.at, meet, message)
     }
 
     fn peek(&self) -> Option<char> {
@@ -275,7 +298,7 @@ impl ExprParser {
             if c == '(' {
                 self.next();
                 self.skip_whitespace();
-                if let Some(op) = self.parse_unary() {
+                let result = if let Some(op) = self.parse_unary() {
                     match self.parse_expression() {
                         Ok(arg) => Ok(Expr::Unary(op, Box::new(arg))),
                         e => e,
@@ -291,11 +314,17 @@ impl ExprParser {
                     }
                 } else {
                     Err(self.error("expect binary or unary expression"))
+                };
+                self.skip_whitespace();
+                if let Some(')') = self.next() {
+                    result
+                } else {
+                    Err(self.error("bracket doesn't match"))
                 }
-            } else if c.is_ascii_digit() {
+            } else if c.is_ascii_digit() || c == '.' || c == '-' {
                 let mut buf = String::new();
                 while let Some(c) = self.peek() {
-                    if c.is_ascii_digit() {
+                    if c.is_ascii_digit() || c == '.' || c == '-' {
                         buf.push(c);
                         self.next();
                     } else {
@@ -356,11 +385,11 @@ impl ExprParser {
 
 fn diff(expr: &str) -> String {
     match Expr::from_str(expr) {
-        Ok(expr) => expr.differentiate().to_string(),
-        Err(err) => format!("{}: {}", err.at, err.message),
+        Ok(expr) => expr.simplify().differentiate().simplify().to_string(),
+        Err(err) => if let Some(c) = err.meet {
+            format!("{} of {}: {}", err.at, c, err.message)
+        } else {
+            format!("{}: {}", err.at, err.message)
+        },
     }
-}
-
-fn main() {
-    println!("{}", diff("(* 3 (* 2 x))"));
 }
