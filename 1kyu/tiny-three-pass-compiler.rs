@@ -1,8 +1,10 @@
+// https://www.codewars.com/kata/tiny-three-pass-compiler/train/rust
+
 use std::slice::Iter;
 use std::iter::Peekable;
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Ast {
     BinOp(String, Box<Ast>, Box<Ast>),
     UnOp(String, i64),
@@ -82,7 +84,15 @@ impl Compiler {
         Compiler { args: HashMap::new() }
     }
 
-    fn tokenize<'a>(&self, program : &'a str) -> Vec<Token> {
+    fn tokenize(&self, program: &str) -> Vec<String> {
+        self.tokenize_(program).iter().map(|x| match x {
+            Token::Literal(x) => x.to_string(),
+            Token::Identifier(x) => x.clone(),
+            Token::Symbol(x) => x.to_string(),
+        }).collect()
+    }
+
+    fn tokenize_(&self, program : &str) -> Vec<Token> {
         let mut tokens : Vec<Token> = vec![];
 
         let mut iter = program.chars().peekable();
@@ -191,7 +201,7 @@ impl Compiler {
     }
 
     fn pass1(&mut self, program : &str) -> Ast {
-        let tokens = self.tokenize(program);
+        let tokens = self.tokenize_(program);
         let mut iter = tokens.iter().peekable();
         self.parse_function(&mut iter)
     }
@@ -205,39 +215,4 @@ impl Compiler {
         ast.emit(&mut result);
         result
     }
-}
-
-fn simulate(assembly : Vec<&str>, argv : Vec<i32>) -> i32 {
-    let mut r = (0, 0);
-    let mut stack : Vec<i32> = vec![];
-
-    for ins in assembly {
-        let mut ws = ins.split_whitespace();
-        match ws.next() {
-            Some("IM") => r.0 = i32::from_str_radix(ws.next().unwrap(), 10).unwrap(),
-            Some("AR") => r.0 = argv[i32::from_str_radix(ws.next().unwrap(), 10).unwrap() as usize],
-            Some("SW") => r = (r.1,r.0),
-            Some("PU") => stack.push(r.0),
-            Some("PO") => r.0 = stack.pop().unwrap(),
-            Some("AD") => r.0 += r.1,
-            Some("SU") => r.0 -= r.1,
-            Some("MU") => r.0 *= r.1,
-            Some("DI") => r.0 /= r.1,
-            _ => panic!("Invalid instruction encountered"),
-        }
-    }
-    r.0
-}
-
-fn main() {
-    let mut compiler = Compiler::new();
-    let code = "[a b] a * a + b * b";
-    let tokens = compiler.tokenize(code);
-    tokens.iter().for_each(|x| match x {
-        Token::Literal(x) => print!("Literal({}), ", x),
-        Token::Identifier(x) => print!("Identifier({}), ", x),
-        Token::Symbol(x) => print!("Symbol({}), ", x),
-    });
-    let ast = compiler.pass1(code);
-    println!("{}", ast.to_string());
 }
