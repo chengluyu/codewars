@@ -176,4 +176,39 @@ describe('defgeneric', () => {
     expect(find1(new Platypus())).toBe('Platy Mammy');
     expect(name(new Platypus())).toBe('Pat');
   })
+
+  it ("Before and After methods", function() {
+    var msgs = "";
+    var log = function (str) { msgs += str; };
+    var describe = defgeneric('describe')
+      .defmethod('Platypus', function () { log('Platy' + arguments.length.toString()); return 'P'; })
+      .defmethod('Mammal', function () { log('Mammy' + arguments.length.toString()); return 'M'; })
+      .defmethod('Platypus', function () { log('platypus' + arguments.length.toString()); }, 'before')
+      .defmethod('Mammal', function () { log('mammal' + arguments.length.toString()); }, 'before')
+      .defmethod('object', function () { log('object' + arguments.length.toString()); }, 'before')
+      .defmethod('Platypus', function () { log('/platypus' + arguments.length.toString()); }, 'after')
+      .defmethod('Mammal', function () { log('/mammal' + arguments.length.toString()); }, 'after')
+      .defmethod('object', function () { log('/object' + arguments.length.toString()); }, 'after');
+
+    var tryIt = function (a) {
+      msgs = "";
+      var ret = describe(a);
+      return ret + ':' + msgs;
+    };
+
+    expect(tryIt(new Platypus())).toBe('P:platypus1mammal1object1Platy1/object1/mammal1/platypus1');
+  });
 })
+
+describe('Tests from the checker', () => {
+  it('No method found', () => {
+    var append = defgeneric('append');
+    append.defmethod('*,Array', function (a,b) { return [a].concat(b); });
+    append.defmethod('Array,*', function (a,b) { return a.concat([b]); });
+    append.defmethod('Array,Array', function (a,b) { return a.concat(b); });
+
+    expect(append.bind(null, 1, 2)).toThrow(
+      'No method found for append with args: number,number'
+    );
+  })
+});

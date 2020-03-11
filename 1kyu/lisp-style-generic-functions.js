@@ -68,19 +68,19 @@ function callNextMethod(context, ...args) {
       context.index += 1;
       // Before
       for (const c of context.beforeCandidates) {
-        c.overload.implementation.apply(null, arguments);
+        c.overload.implementation.apply(null, args);
       }
       // Primary
       const ret = context.primaryCandidates[0].overload.implementation.apply(context, args);
       // After
       for (const c of context.afterCandidates) {
-        c.overload.implementation.apply(null, arguments);
+        c.overload.implementation.apply(null, args);
       }
       return ret;
     } else if (context.index < context.primaryCandidates.length) {
       return context.primaryCandidates[context.index++].overload.implementation.apply(context, args);
     } else {
-      throw new Error(`No next method found for ${context.name} in primary`);
+      throw `No next method found for ${context.name} in primary`;
     }
   } else if (context.index < context.aroundCandidates.length) {
     const index = context.index;
@@ -93,7 +93,7 @@ function callNextMethod(context, ...args) {
     }
     return context.aroundCandidates[index].overload.implementation.apply(context, arguments);
   } else {
-    throw new Error(`No next method found for ${context.name} in around`);
+    throw `No next method found for ${context.name} in around`;
   }
 }
 
@@ -125,7 +125,7 @@ function defgeneric(name) {
       return callNextMethod(context, ...args);
     } else {
       const argumentTypes = args.map(getTypeName).join(',');
-      throw new Error(`No method found for ${name} with args: ${argumentTypes}`)
+      throw `No method found for ${name} with args: ${argumentTypes}`;
     }
   }
 
@@ -156,11 +156,11 @@ function defgeneric(name) {
       : null)
     if (mostSpecificCandidate === null) {
       const argumentTypes = [...arguments].map(getTypeName).join(',');
-      throw new Error(`No method found for ${name} with args: ${argumentTypes}`)
+      throw `No method found for ${name} with args: ${argumentTypes}`;
     }
 
     // Make a key from current version and types of the most specific candidate.
-    const key = `${version}_${mostSpecificCandidate.types}`;
+    const key = `${version}_${mostSpecificCandidate.overload.types}`;
     let item = findMethodCache.get(key);
 
     // If no cached function, make one.
@@ -203,7 +203,12 @@ function defgeneric(name) {
         case 'string':
           return x => typeof x === 'string' ? 0 : TYPE_MISMATCH;
         case 'object':
-          return x => typeof x === 'object' && x !== null ? 0 : TYPE_MISMATCH;
+          return x => {
+            if (x === null) {
+              return TYPE_MISMATCH;
+            }
+            return getPrototypeChain(x).indexOf('Object');
+          }
         case 'function':
           return x => typeof x === 'function' ? 0 : TYPE_MISMATCH;
         default:
