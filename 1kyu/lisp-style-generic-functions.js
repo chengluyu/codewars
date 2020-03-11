@@ -1,3 +1,5 @@
+// This Kata spent me nearly 5 hours, according to Toggl.
+
 // medium.com/fhinkel/v8-internals-how-small-is-a-small-integer-e0badc18b6da
 const V8_SMI_MAX = 1 << 31 - 1;
 const TYPE_MISMATCH = -1;
