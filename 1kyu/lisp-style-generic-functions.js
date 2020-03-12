@@ -1,7 +1,7 @@
 // This Kata spent me nearly 5 hours, according to Toggl.
 
 // medium.com/fhinkel/v8-internals-how-small-is-a-small-integer-e0badc18b6da
-const V8_SMI_MAX = 1 << 31 - 1;
+const V8_SMI_MAX = 1 << (31 - 1);
 const TYPE_MISMATCH = -1;
 
 class OverloadList {
@@ -29,14 +29,16 @@ class OverloadList {
   }
 
   getCandidates(args, reverse = false) {
-    const factor = reverse ? -1 : 1
+    const factor = reverse ? -1 : 1;
     return this.overloads
       .map(x => ({
         overload: x,
         specificity: x.guard.apply(null, args)
       }))
       .filter(x => x.specificity !== null)
-      .sort((a, b) => factor * compareSpecificity(a.specificity, b.specificity));
+      .sort(
+        (a, b) => factor * compareSpecificity(a.specificity, b.specificity)
+      );
   }
 }
 
@@ -46,13 +48,13 @@ function getPrototypeChain(any) {
   do {
     proto = Object.getPrototypeOf(proto);
     chain.push(proto.constructor.name);
-  } while (proto.constructor.name !== 'Object');
+  } while (proto.constructor.name !== "Object");
   return chain;
 }
 
 function compareSpecificity(a, b) {
   if (a.length !== b.length) {
-    throw new Error('specificity arrays must be of the same length');
+    throw new Error("specificity arrays must be of the same length");
   }
   const length = a.length;
   for (let i = 0; i < length; i++) {
@@ -73,14 +75,19 @@ function callNextMethod(context, ...args) {
         c.overload.implementation.apply(null, args);
       }
       // Primary
-      const ret = context.primaryCandidates[0].overload.implementation.apply(context, args);
+      const ret = context.primaryCandidates[0].overload.implementation.apply(
+        context,
+        args
+      );
       // After
       for (const c of context.afterCandidates) {
         c.overload.implementation.apply(null, args);
       }
       return ret;
     } else if (context.index < context.primaryCandidates.length) {
-      return context.primaryCandidates[context.index++].overload.implementation.apply(context, args);
+      return context.primaryCandidates[
+        context.index++
+      ].overload.implementation.apply(context, args);
     } else {
       throw `No next method found for ${context.name} in primary`;
     }
@@ -89,11 +96,17 @@ function callNextMethod(context, ...args) {
     // Advance the index.
     context.index += 1;
     // Switch to `primary` if the around candidates are run out.
-    if (context.index === context.aroundCandidates.length && context.primaryCandidates.length > 0) {
+    if (
+      context.index === context.aroundCandidates.length &&
+      context.primaryCandidates.length > 0
+    ) {
       context.primary = true;
       context.index = 0;
     }
-    return context.aroundCandidates[index].overload.implementation.apply(context, arguments);
+    return context.aroundCandidates[index].overload.implementation.apply(
+      context,
+      arguments
+    );
   } else {
     throw `No next method found for ${context.name} in around`;
   }
@@ -108,10 +121,10 @@ function defgeneric(name) {
 
   function getTypeName(any) {
     let type = typeof any;
-    if (type === 'object') {
+    if (type === "object") {
       if (any === null) {
-        type = 'null';
-      } else if (any.constructor.name !== 'Object') {
+        type = "null";
+      } else if (any.constructor.name !== "Object") {
         type = any.constructor.name;
       }
     }
@@ -126,38 +139,41 @@ function defgeneric(name) {
       context.primary = true;
       return callNextMethod(context, ...args);
     } else {
-      const argumentTypes = args.map(getTypeName).join(',');
+      const argumentTypes = args.map(getTypeName).join(",");
       throw `No method found for ${name} with args: ${argumentTypes}`;
     }
   }
 
   function func(...args) {
-    return run({
-      name,
-      aroundCandidates: arounds.getCandidates(args),
-      primaryCandidates: overloads.getCandidates(args),
-      beforeCandidates: befores.getCandidates(args),
-      afterCandidates: afters.getCandidates(args, true),
-      primary: null,
-      index: 0,
-    }, args);
+    return run(
+      {
+        name,
+        aroundCandidates: arounds.getCandidates(args),
+        primaryCandidates: overloads.getCandidates(args),
+        beforeCandidates: befores.getCandidates(args),
+        afterCandidates: afters.getCandidates(args, true),
+        primary: null,
+        index: 0
+      },
+      args
+    );
   }
 
-  const findMethodCache = new Map()
+  const findMethodCache = new Map();
 
   function findMethod(...args) {
     const aroundCandidates = arounds.getCandidates(args);
     const primaryCandidates = overloads.getCandidates(args);
     const beforeCandidates = befores.getCandidates(args);
     const afterCandidates = afters.getCandidates(args, true);
-    const mostSpecificCandidate = (
-        aroundCandidates.length > 0
-      ? aroundCandidates[0]
-      : primaryCandidates.length > 0
-      ? primaryCandidates[0]
-      : null)
+    const mostSpecificCandidate =
+      aroundCandidates.length > 0
+        ? aroundCandidates[0]
+        : primaryCandidates.length > 0
+        ? primaryCandidates[0]
+        : null;
     if (mostSpecificCandidate === null) {
-      const argumentTypes = [...arguments].map(getTypeName).join(',');
+      const argumentTypes = [...arguments].map(getTypeName).join(",");
       throw `No method found for ${name} with args: ${argumentTypes}`;
     }
 
@@ -167,15 +183,19 @@ function defgeneric(name) {
 
     // If no cached function, make one.
     if (item === undefined) {
-      item = (...args) => run({
-        name,
-        aroundCandidates,
-        primaryCandidates,
-        beforeCandidates,
-        afterCandidates,
-        primary: null,
-        index: 0,
-      }, args);
+      item = (...args) =>
+        run(
+          {
+            name,
+            aroundCandidates,
+            primaryCandidates,
+            beforeCandidates,
+            afterCandidates,
+            primary: null,
+            index: 0
+          },
+          args
+        );
 
       findMethodCache.set(key, item);
     }
@@ -192,77 +212,77 @@ function defgeneric(name) {
   function parseGuard(types) {
     const guards = types.split(/\s*,\s*/g).map(type => {
       switch (type) {
-        case '*':
+        case "*":
           return () => V8_SMI_MAX;
-        case 'undefined':
-          return x => x === undefined ? 0 : TYPE_MISMATCH;
-        case 'null':
-          return x => x === null ? 0 : TYPE_MISMATCH;
-        case 'boolean':
-          return x => typeof x === 'boolean' ? 0 : TYPE_MISMATCH;
-        case 'number':
-          return x => typeof x === 'number' ? 0 : TYPE_MISMATCH;
-        case 'string':
-          return x => typeof x === 'string' ? 0 : TYPE_MISMATCH;
-        case 'object':
+        case "undefined":
+          return x => (x === undefined ? 0 : TYPE_MISMATCH);
+        case "null":
+          return x => (x === null ? 0 : TYPE_MISMATCH);
+        case "boolean":
+          return x => (typeof x === "boolean" ? 0 : TYPE_MISMATCH);
+        case "number":
+          return x => (typeof x === "number" ? 0 : TYPE_MISMATCH);
+        case "string":
+          return x => (typeof x === "string" ? 0 : TYPE_MISMATCH);
+        case "object":
           return x => {
             if (x === null) {
               return TYPE_MISMATCH;
             }
-            return getPrototypeChain(x).indexOf('Object');
-          }
-        case 'function':
-          return x => typeof x === 'function' ? 0 : TYPE_MISMATCH;
+            return getPrototypeChain(x).indexOf("Object");
+          };
+        case "function":
+          return x => (typeof x === "function" ? 0 : TYPE_MISMATCH);
         default:
           return x => getPrototypeChain(x).indexOf(type);
       }
-    })
-    return function () {
+    });
+    return function() {
       if (arguments.length !== guards.length) {
         return null;
       }
       const specificity = guards.map((g, i) => g(arguments[i]));
       return specificity.indexOf(TYPE_MISMATCH) >= 0 ? null : specificity;
-    }
+    };
   }
 
-  func.defmethod = function (types, implementation, combination = 'primary') {
+  func.defmethod = function(types, implementation, combination = "primary") {
     version += 1;
     const overload = {
       types,
       guard: parseGuard(types),
       implementation,
-      combination,
+      combination
     };
-    if (combination === 'before') {
+    if (combination === "before") {
       befores.add(overload);
-    } else if (combination === 'primary') {
+    } else if (combination === "primary") {
       overloads.add(overload);
-    } else if (combination === 'after') {
+    } else if (combination === "after") {
       afters.add(overload);
-    } else if (combination === 'around') {
+    } else if (combination === "around") {
       arounds.add(overload);
     } else {
       throw new Error(`unknown combination "${combination}"`);
     }
     return func;
-  }
+  };
 
-  func.removeMethod = function (types, combination = 'primary') {
+  func.removeMethod = function(types, combination = "primary") {
     version += 1;
-    if (combination === 'before') {
+    if (combination === "before") {
       befores.remove(types);
-    } else if (combination === 'primary') {
+    } else if (combination === "primary") {
       overloads.remove(types);
-    } else if (combination === 'after') {
+    } else if (combination === "after") {
       afters.remove(types);
-    } else if (combination === 'around') {
+    } else if (combination === "around") {
       arounds.remove(types);
     } else {
       throw new Error(`unknown combination "${combination}"`);
     }
     return func;
-  }
+  };
 
   func.findMethod = findMethod;
 
@@ -273,5 +293,5 @@ module.exports = {
   getPrototypeChain,
   compareSpecificity,
   callNextMethod,
-  defgeneric,
-}
+  defgeneric
+};

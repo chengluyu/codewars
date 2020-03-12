@@ -1,18 +1,16 @@
 class Expression {
-  constructor() {
-
-  }
+  constructor() {}
 
   differentiate() {
-    throw new Error('try to call `differentiate` on base class');
+    throw new Error("try to call `differentiate` on base class");
   }
 
   simplify() {
-    throw new Error('try to call `simplify` on base class');
+    throw new Error("try to call `simplify` on base class");
   }
 
   toString() {
-    throw new Error('try to call `toString` on base class');
+    throw new Error("try to call `toString` on base class");
   }
 
   static parse(expr) {
@@ -30,11 +28,11 @@ class Expression {
     };
 
     const OPERATOR_MAP = {
-      '+': Add,
-      '-': Subtract,
-      '*': Multiply,
-      '/': Divide,
-      '^': Pow
+      "+": Add,
+      "-": Subtract,
+      "*": Multiply,
+      "/": Divide,
+      "^": Pow
     };
 
     function whitespace() {
@@ -50,11 +48,11 @@ class Expression {
         expr = expr.substr(result[0].length);
         return new Constant(parseFloat(result[0]));
       }
-      if (expr.charAt(0) === 'x') {
+      if (expr.charAt(0) === "x") {
         expr = expr.substr(1);
         return new Variable();
       }
-      if (expr.charAt(0) === '(') {
+      if (expr.charAt(0) === "(") {
         let node;
         expr = expr.substr(1);
         whitespace();
@@ -80,7 +78,7 @@ class Expression {
           );
         }
         whitespace();
-        if (expr.charAt(0) === ')') {
+        if (expr.charAt(0) === ")") {
           expr = expr.substr(1);
         } else {
           throw new Error(`expect a ")" instead of "${expr}"`);
@@ -136,7 +134,7 @@ class Variable extends Expression {
   }
 
   toString() {
-    return 'x';
+    return "x";
   }
 }
 
@@ -148,10 +146,7 @@ class Add extends Expression {
   }
 
   differentiate() {
-    return new Add(
-      this.lhs.differentiate(),
-      this.rhs.differentiate()
-    );
+    return new Add(this.lhs.differentiate(), this.rhs.differentiate());
   }
 
   simplify() {
@@ -191,10 +186,7 @@ class Subtract extends Expression {
   }
 
   differentiate() {
-    return new Subtract(
-      this.lhs.differentiate(),
-      this.rhs.differentiate()
-    );
+    return new Subtract(this.lhs.differentiate(), this.rhs.differentiate());
   }
 
   simplify() {
@@ -237,14 +229,8 @@ class Multiply extends Expression {
 
   differentiate() {
     return new Add(
-      new Multiply(
-        this.lhs.differentiate(),
-        this.rhs
-      ),
-      new Multiply(
-        this.lhs,
-        this.rhs.differentiate()
-      )
+      new Multiply(this.lhs.differentiate(), this.rhs),
+      new Multiply(this.lhs, this.rhs.differentiate())
     );
   }
 
@@ -291,27 +277,15 @@ class Divide extends Expression {
   differentiate() {
     // f(x) / a
     if (this.rhs instanceof Constant) {
-      return new Divide(
-        this.lhs.differentiate(),
-        this.rhs
-      );
+      return new Divide(this.lhs.differentiate(), this.rhs);
     }
     // f(x) / g(x)
     return new Divide(
       new Subtract(
-        new Multiply(
-          this.lhs.differentiate(),
-          this.rhs
-        ),
-        new Multiply(
-          this.lhs,
-          this.rhs.differentiate()
-        )
+        new Multiply(this.lhs.differentiate(), this.rhs),
+        new Multiply(this.lhs, this.rhs.differentiate())
       ),
-      new Pow(
-        this.rhs,
-        new Constant(2)
-      )
+      new Pow(this.rhs, new Constant(2))
     );
   }
 
@@ -328,7 +302,7 @@ class Divide extends Expression {
     }
     if (rhs instanceof Constant) {
       if (rhs.value === 0) {
-        throw new Error('try to divide by zero');
+        throw new Error("try to divide by zero");
       }
       if (rhs.value === 1) {
         return lhs;
@@ -364,10 +338,7 @@ class Pow extends Expression {
         new Constant(a),
         new Multiply(
           this.base.differentiate(),
-          new Pow(
-            this.base,
-            new Constant(a - 1)
-          )
+          new Pow(this.base, new Constant(a - 1))
         )
       );
     }
@@ -376,20 +347,12 @@ class Pow extends Expression {
       const a = this.base.value;
       return new Multiply(
         new Logarithm(a),
-        new Multiply(
-          this.exponent.differentiate(),
-          this
-        )
+        new Multiply(this.exponent.differentiate(), this)
       );
     }
     // f(x) ^ g(x)
     return new Exponent(
-      new Multiply(
-        this.exponent,
-        new Logarithm(
-          this.base
-        )
-      )
+      new Multiply(this.exponent, new Logarithm(this.base))
     ).differentiate();
   }
 
@@ -435,10 +398,7 @@ class Cosine extends Expression {
   differentiate() {
     return new Multiply(
       this.argument.differentiate(),
-      new Multiply(
-        new Constant(-1),
-        new Sine(this.argument)
-      )
+      new Multiply(new Constant(-1), new Sine(this.argument))
     );
   }
 
@@ -496,13 +456,7 @@ class Tangent extends Expression {
   differentiate() {
     return new Multiply(
       this.argument.differentiate(),
-      new Add(
-        new Constant(1),
-        new Pow(
-          this,
-          new Constant(2)
-        )
-      )
+      new Add(new Constant(1), new Pow(this, new Constant(2)))
     );
   }
 
@@ -529,10 +483,7 @@ class Exponent extends Expression {
   }
 
   differentiate() {
-    return new Multiply(
-      this.argument.differentiate(),
-      this
-    );
+    return new Multiply(this.argument.differentiate(), this);
   }
 
   simplify() {
@@ -560,10 +511,7 @@ class Logarithm extends Expression {
   differentiate() {
     return new Multiply(
       this.argument.differentiate(),
-      new Divide(
-        new Constant(1),
-        this.argument
-      )
+      new Divide(new Constant(1), this.argument)
     );
   }
 
@@ -589,16 +537,16 @@ function checkConstructionAndStringify(expr) {
   if (expr === serialized) {
     console.log(`Everything works well with "${expr}".`);
   } else {
-    console.log(`Oops! "${expr}" !== "${serialized}".`)
+    console.log(`Oops! "${expr}" !== "${serialized}".`);
   }
 }
 
 function diff(expr) {
   const y = Expression.parse(expr);
-  console.log('The original tree:', y.toString());
+  console.log("The original tree:", y.toString());
   const dy = y.differentiate();
-  console.log('Differentiated expression:', dy.toString());
+  console.log("Differentiated expression:", dy.toString());
   const reduced_dy = dy.simplify();
-  console.log('Reduced differentiated expression:', reduced_dy.toString());
+  console.log("Reduced differentiated expression:", reduced_dy.toString());
   return reduced_dy.toString();
 }

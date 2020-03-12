@@ -11,24 +11,24 @@ function parseRegExp(s) {
       let c = get();
       let t = null;
       // factor
-      if (c === '(') {
+      if (c === "(") {
         t = choice();
-        if ((c = get()) !== ')') {
+        if ((c = get()) !== ")") {
           console.log(s);
-          throw new Error(`expect right bracket instead of "${c}"`)
+          throw new Error(`expect right bracket instead of "${c}"`);
         }
-      } else if (c === '.') {
+      } else if (c === ".") {
         t = new Any();
-      } else if (c === '*') {
+      } else if (c === "*") {
         throw new Error('invalid RegExp factor "*"');
-      } else if (c === '|' || c === ')') {
+      } else if (c === "|" || c === ")") {
         s = c + s;
         break;
       } else {
         t = new Normal(c);
       }
       // quantifier
-      if (s.charAt(0) === '*') {
+      if (s.charAt(0) === "*") {
         s = s.substr(1);
         t = new ZeroOrMore(t);
       }
@@ -43,9 +43,9 @@ function parseRegExp(s) {
   function choice() {
     let n = 1;
     let t = sequence();
-    while (s.charAt(0) === '|') {
+    while (s.charAt(0) === "|") {
       if (++n > 2) {
-        throw new Error('"|" is not associative')
+        throw new Error('"|" is not associative');
       }
       s = s.substr(1);
       t = new Or(t, sequence());

@@ -1,7 +1,7 @@
 /**
  * CSV Parser.  Takes a string as input and returns
  * an array of arrays (for each row).
- * 
+ *
  * @param input String, CSV input
  * @param separator String, single character used to separate fields.
  *        Defaults to ","
@@ -9,12 +9,13 @@
  *        Defaults to "\"".
  */
 function parseCSV(input, separator, quote) {
-  separator = separator || ',';
+  separator = separator || ",";
   quote = quote || '"';
-  
+
   let stream = input[Symbol.iterator]();
   let peek = stream.next();
-  let lineNo = 1, column = 1;
+  let lineNo = 1,
+    column = 1;
 
   function error(message) {
     throw new Error(`${message} at line ${lineNo}, column ${column}`);
@@ -22,7 +23,7 @@ function parseCSV(input, separator, quote) {
 
   function next() {
     peek = stream.next();
-    if (peek.value === '\n') {
+    if (peek.value === "\n") {
       lineNo++;
       column = 1;
     } else {
@@ -31,14 +32,13 @@ function parseCSV(input, separator, quote) {
   }
 
   function cell() {
-    let text = '';
+    let text = "";
 
     if (peek.value === quote) {
       next();
       while (true) {
-
         if (peek.done) {
-          error('unmatch quote');
+          error("unmatch quote");
         }
 
         if (peek.value === quote) {
@@ -56,7 +56,7 @@ function parseCSV(input, separator, quote) {
       }
     } else {
       while (true) {
-        if (peek.done || peek.value === separator || peek.value === '\n') {
+        if (peek.done || peek.value === separator || peek.value === "\n") {
           break;
         } else {
           text += peek.value;
@@ -76,22 +76,14 @@ function parseCSV(input, separator, quote) {
 
       if (peek.done) {
         break;
-      }
-
-      else if (peek.value === '\n') {
+      } else if (peek.value === "\n") {
         next();
         break;
-      }
-
-      else if (peek.value === separator) {
+      } else if (peek.value === separator) {
         next();
+      } else {
+        error("expect a separator");
       }
-
-      else {
-        error('expect a separator');
-      }
-
-      
     }
 
     return cs;

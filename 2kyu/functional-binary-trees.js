@@ -17,11 +17,11 @@ class EmptyBinaryTree {
     return 0;
   }
 
-  inorder(fn) { }
+  inorder(fn) {}
 
-  preorder(fn) { }
+  preorder(fn) {}
 
-  postorder(fn) { }
+  postorder(fn) {}
 
   contains(x) {
     return false;
@@ -119,7 +119,11 @@ class BinaryTreeNode extends EmptyBinaryTree {
         while (!m.left.isEmpty()) {
           m = m.left;
         }
-        return new BinaryTreeNode(m.value, this.left, this.right.remove(m.value));
+        return new BinaryTreeNode(
+          m.value,
+          this.left,
+          this.right.remove(m.value)
+        );
       }
     }
   }
