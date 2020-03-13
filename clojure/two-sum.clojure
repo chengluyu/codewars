@@ -1,0 +1,12 @@
+(ns twosum)
+
+(defn twosum [xs y]
+  (first
+    (filter
+      #(and
+        (not= (nth % 1) -1)
+        (not= (nth % 0) (nth % 1)))
+      (map
+        #(list %1 (.indexOf xs (- y %2)))
+        (->> xs count range)
+        xs))))

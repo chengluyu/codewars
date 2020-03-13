@@ -1,0 +1,8 @@
+(ns averages)
+
+(defn averages [xs]
+  (map
+    (fn [x y] (/ (+ x y) 2.0))
+    (next xs)
+    (drop-last xs))
+)

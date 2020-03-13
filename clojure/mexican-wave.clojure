@@ -1,0 +1,19 @@
+; My solution is reall ugly.
+
+(ns wave
+  (:use [clojure.string :only [upper-case join]])
+)
+
+(defn wave [string]
+  (map
+    (fn [tuple]
+      (let
+        [[i ch] tuple]
+        (join [
+          (subs string 0 i)
+          (->> ch str upper-case)
+          (subs string (inc i))])))
+    (filter
+      #(Character/isLetter (nth % 1))
+      (map vector (->> string count range) string)))
+)

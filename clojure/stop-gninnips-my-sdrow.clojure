@@ -1,0 +1,16 @@
+(ns clojure.spin-words
+  (:require [clojure.string :as str]))
+
+(defn spin-words [string]
+  (str/join
+    " "
+    (map
+      #(if (>= (count %) 5) (str/reverse %) %)
+      (str/split string #"\s+"))))
+
+; A clever solution:
+
+; (ns clojure.spin-words)
+
+; (defn spin-words [s]
+;   (clojure.string/replace s #"\w{5,}" clojure.string/reverse))
