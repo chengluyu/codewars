@@ -1,0 +1,9 @@
+(ns digital-root)
+
+(defn sum-digits [n]
+  (reduce + (map #(- (int %) 48) (str n)))
+)
+
+(defn digital-root [n]
+  (first (filter (partial > 10) (iterate sum-digits n)))
+)

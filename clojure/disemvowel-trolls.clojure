@@ -1,0 +1,6 @@
+(ns disemvowel-trolls)
+
+(defn disemvowel
+  [string]
+  (do (clojure.string/join (remove #(re-matches #"[aeiouAEIOU]" (str %)) string)))
+)

@@ -1,0 +1,8 @@
+(ns which-are-in.core)
+
+(defn in-array [xs ys]
+  (filter
+    (fn [x] (some #(clojure.string/includes? % x) ys))
+    (->> xs sort dedupe)
+  )
+)
