@@ -1,0 +1,14 @@
+(ns backwards-prime.core)
+
+(defn is-prime [n]
+  (->> n double Math/sqrt int inc (range 2) (every? #(->> % (rem n) (< 0)))))
+
+(defn reverse-int [n] (->> n str clojure.string/reverse (Integer.)))
+
+(defn backwards-prime [start stop]
+  (filter
+    #(and
+      (not= % (reverse-int %))
+      (is-prime %)
+      (->> % reverse-int is-prime))
+    (range start (inc stop))))
