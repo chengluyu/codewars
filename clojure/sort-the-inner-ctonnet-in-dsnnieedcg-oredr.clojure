@@ -1,0 +1,15 @@
+(ns kata.sort-the-inner-content
+  (:use [clojure.string :only [join]]))
+
+(defn sort-word [x]
+  (str
+    (first x)
+    (->> x rest drop-last sort reverse join)
+    (last x)))
+
+(defn sort-the-inner-content [words]
+  (->>
+    words
+    (re-seq #"[^\w]+|\w+")
+    (map #(if (re-matches #"\w{2,}" %) (sort-word %) %))
+    join))

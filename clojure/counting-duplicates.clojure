@@ -1,0 +1,6 @@
+(ns katas.counting-duplicates
+  (:use [clojure.string :only [upper-case]]))
+
+(defn duplicate-count [text]
+  (count (filter #(< 1 %) (->> text upper-case frequencies vals)))
+)

@@ -1,0 +1,4 @@
+(ns string-rotation)
+
+(defn shifted-diff [x y]
+  ((fnil identity -1) (if (= (count x) (count y)) (clojure.string/index-of (str y y) x) -1)))
