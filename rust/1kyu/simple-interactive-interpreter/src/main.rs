@@ -1,5 +1,16 @@
 use std::collections::HashMap;
 
+enum Token {
+    Whitespace,
+    Punctuator(char),
+    Identifier(String),
+    Number(f32),
+}
+
+struct Lexer {
+
+}
+
 enum BinaryOp {
     Add,
     Sub,
@@ -23,11 +34,21 @@ struct Interpreter {
 
 impl Interpreter {
     fn new() -> Interpreter {
+        Interpreter {
+            vars: HashMap::new(),
+            fns: HashMap::new(),
+        }
+    }
+
+    fn parse(&mut self, input: &str) -> Result<Option<f32>, Box<Func>> {
         unimplemented!()
     }
 
     fn input(&mut self, input: &str) -> Result<Option<f32>, String> {
-        unimplemented!()
+        let result = self.parse(input);
+        match result {
+            Ok()
+        }
     }
 }
 
@@ -69,5 +90,5 @@ fn conflicts() {
 }
 
 fn main() {
-
+    println!("Hello, world!");
 }
